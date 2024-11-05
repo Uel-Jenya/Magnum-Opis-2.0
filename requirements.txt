@@ -1,0 +1,8 @@
+multiprocess~=0.70.14
+selenium==4.9.1
+PyAutoGUI~=0.9.53
+chess==1.10.0
+packaging==24.0
+PyQt5~=5.15.7
+dearpygui
+
