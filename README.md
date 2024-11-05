@@ -1,1 +1,1 @@
-# -Magnum-Opis-2.0
+# Magnum-Opis-2.0
