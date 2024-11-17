@@ -145,12 +145,11 @@ class ChessApp:
 
                     dpg.add_input_int(tag = "threads", label="Threads", default_value=1, callback=self.on_cpu_threads_change, width=90)
                     dpg.add_input_int(tag = "move overhead", label="Move Overhead", default_value=15, width=90)
-                    dpg.add_button(tag = "select stockfish", label="Select Stockfish", callback= lambda: dpg.show_item("file dialog"))
+                    dpg.add_button(tag = "select stockfish", label="Select Stockfish", callback= self.select_stockfish)
 
                     dpg.add_progress_bar(tag="eval", default_value= 0.5, width= 200)
                     
-                    with dpg.file_dialog(directory_selector=False, show=False, callback=self.on_stockfish_selected, id="file dialog", width=700 ,height=400):
-                        dpg.add_file_extension(".exe")
+                
                         
             with dpg.window(label="Select Fish", modal=True, show=False, tag="modal", no_title_bar=True, width=250):
                 dpg.add_text("", tag= "modal text")
@@ -577,6 +576,16 @@ class ChessApp:
         if level == self.errors[1]:
             dpg.configure_item("open browser", enabled = True, label = "Open Browser")
             dpg.configure_item("start", label = "start", callback = self.on_start_button_listener, enabled = True)
+
+    def select_stockfish(self):
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+
+        self.stockfish_path = filedialog.askopenfilename()
+        print(self.stockfish_path)
 
     def on_close_listener(self):
         # Set self.exit to True so that the threads will stop
