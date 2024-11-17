@@ -10,6 +10,9 @@ from overlay import run
 from stockfish_bot import StockfishBot
 from selenium.common import WebDriverException
 from selenium.common.exceptions import InvalidCookieDomainException, UnableToSetCookieException
+import tkinter as tk
+from tkinter import filedialog
+
 class ChessApp:
 
     def __init__(self):
@@ -578,8 +581,7 @@ class ChessApp:
             dpg.configure_item("start", label = "start", callback = self.on_start_button_listener, enabled = True)
 
     def select_stockfish(self):
-        import tkinter as tk
-        from tkinter import filedialog
+
 
         root = tk.Tk()
         root.withdraw()
