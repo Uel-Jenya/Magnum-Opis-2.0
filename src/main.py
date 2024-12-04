@@ -60,6 +60,20 @@ class ChessApp:
         # Used for storing the match moves
         self.match_moves = []
 
+         # Start the process checker thread
+        process_checker_thread = threading.Thread(target=self.process_checker_thread)
+        process_checker_thread.start()
+
+        # Start the browser checker thread
+        browser_checker_thread = threading.Thread(target=self.browser_checker_thread)
+        browser_checker_thread.start()
+
+        # Start the process communicator thread
+        process_communicator_thread = threading.Thread(
+            target=self.process_communicator_thread
+        )
+        process_communicator_thread.start()
+
 
         dpg.create_context()
         self.min_width = 400
@@ -100,7 +114,7 @@ class ChessApp:
                                         dpg.add_button(tag = "start",label="Start", callback=self.on_start_button_listener, enabled=False)
 
                                     with dpg.child_window(width = 150, border = False):
-                                        dpg.add_checkbox(tag = "manual mode", label="Manual Mode", callback=self.on_manual_mode_checkbox_listener)
+                                        dpg.add_checkbox(tag = "manual mode", label="Manual Mode")
                                         dpg.add_checkbox(tag = "mouseless mode", label="Mouseless Mode")
                                         dpg.add_checkbox(tag = "puzzles", label="Non-stop puzzles")
                                         dpg.add_checkbox(tag = "bongcloud", label="Bongcloud")
@@ -126,15 +140,18 @@ class ChessApp:
                                         dpg.add_combo(["Best Move", "2nd Best Move", "3rd Best Move"], tag = "move select", callback = self.on_move_selected)
 
                                     dpg.add_separator(label="Timer")
-                                    dpg.add_checkbox(tag = "timer", label="Timer", callback=self.on_timer_change)
-                                    self.timer_min_slider = dpg.add_slider_int(tag = "min timer",label="MIN", clamped=True,min_value=0, max_value=20, default_value=2, callback=self.on_timer_change)
-                                    self.timer_max_slider = dpg.add_slider_int(tag = "max timer",label="MAX", min_value=0, max_value=20, default_value=15, callback=self.on_timer_change)
+                                    dpg.add_checkbox(tag = "timer", label="Timer", )
+                                    self.timer_min_slider = dpg.add_slider_int(tag = "min timer",label="MIN", clamped=True,min_value=0, max_value=20, default_value=2)
+                                    self.timer_max_slider = dpg.add_slider_int(tag = "max timer",label="MAX", min_value=0, max_value=20, default_value=15)
 
                             dpg.add_separator()
                             dpg.add_checkbox(tag = "load cookies",label="Load cookies")
                             dpg.add_button(label="Save cookies", callback=self.on_save_cookies_button_listener)
+                            dpg.add_separator(label ="Eval")
+                            dpg.add_progress_bar(tag="eval", default_value= 0.5, width= 200)
+                            dpg.add_text(tag = "eval text", default_value="0")
 
-                            dpg.add_checkbox(label="Window stays on top", default_value=True, callback=self.on_topmost_checkbox_listener)
+                            #dpg.add_checkbox(label="Window stays on top", default_value=True, callback=self.on_topmost_checkbox_listener)
 
                         with dpg.child_window(no_scrollbar=True, border=False, width=50):  # Increase width here
                             dpg.add_button(tag="toggle next", height=100, width=50, pos=(0, 225), arrow=True, direction=1, callback=self.togle_fish)  # Button inside larger child_window
@@ -142,22 +159,45 @@ class ChessApp:
                 # Right Frame - Stockfish Settings
                 with dpg.child_window(tag=2, width=200, height=500, show=False, pos=(400, 0), border=False):
                     dpg.add_text("Stockfish Parameters")
-                    dpg.add_slider_int(tag = "skill level", label="Skill Level", min_value=1, max_value=20, default_value=20, callback=self.on_skill_change, width=90)
-                    dpg.add_input_int(tag = "hash", label="Hash (MB)", default_value=8, callback=self.on_memory_change, width=90)
-                    dpg.add_slider_int(tag = "depth", label="depth", min_value=1, max_value=20, default_value=6, callback=self.on_skill_change, width=90)
+                    dpg.add_slider_int(tag = "skill level", label="Skill Level", min_value=1, max_value=20, default_value=20, width=90)
+                    dpg.add_input_int(tag = "hash", label="Hash (MB)", default_value=8, width=90)
+                    dpg.add_slider_int(tag = "depth", label="depth", min_value=1, max_value=20, default_value=6, width=90)
 
-                    dpg.add_input_int(tag = "threads", label="Threads", default_value=1, callback=self.on_cpu_threads_change, width=90)
+                    dpg.add_input_int(tag = "threads", label="Threads", default_value=1, width=90)
                     dpg.add_input_int(tag = "move overhead", label="Move Overhead", default_value=15, width=90)
-                    dpg.add_button(tag = "select stockfish", label="Select Stockfish", callback= self.select_stockfish)
-
-                    dpg.add_progress_bar(tag="eval", default_value= 0.5, width= 200)
+                    dpg.add_button(tag = "select stockfish", label="Select Stockfish", callback= self.on_select_stockfish_button_listener)\
                     
-                
+                    with dpg.window(label="Select Fish", modal=True, show=False, tag="modal", no_title_bar=True, width=250):
+                        dpg.add_text("", tag= "modal text")
+                        dpg.add_separator()
+                        dpg.add_button(label="OK", width=75, callback=lambda: dpg.configure_item("modal", show=False), pos=(90, 70))
+
+                    
+
+                    #dpg.add_bar_group_series(values= [0,5, 0.5], label_ids= ["black", "white"], group_size=2)
+                    # Create a plot
+                    # create x axis
+                    '''                    with dpg.plot(label="Bar Group Series", height=400, width=50):
+                        dpg.add_plot_legend()
+
+                        ilabels = ["black","white"]
+                        glabels = (("eval", 0))
+                        groups_c = 2
+
                         
-            with dpg.window(label="Select Fish", modal=True, show=False, tag="modal", no_title_bar=True, width=250):
-                dpg.add_text("", tag= "modal text")
-                dpg.add_separator()
-                dpg.add_button(label="OK", width=75, callback=lambda: dpg.configure_item("modal", show=False), pos=(90, 70))
+
+                        dpg.add_plot_axis(dpg.mvXAxis, label="Student", tag="xaxis_bar_group", no_gridlines=True, auto_fit=True)
+                        dpg.set_axis_limits(dpg.last_item(), 5, 10)
+                        #dpg.set_axis_ticks(dpg.last_item(), glabels)
+
+                        # create y axis
+                        with dpg.plot_axis(dpg.mvYAxis, label="Score", tag="yaxis_bar_group", auto_fit=True):
+                            dpg.set_axis_limits(dpg.last_item(), 0, 110)
+                            dpg.add_bar_group_series(values=[0.5, 0.5], label_ids=ilabels, 
+                                group_size=groups_c, tag="bar_group_series", label="Final Exam")
+                    
+                        '''
+
 
 
         dpg.bind_font(default_font)
@@ -214,19 +254,7 @@ class ChessApp:
         dpg.start_dearpygui()
         dpg.destroy_context()
 
-        # Start the process checker thread
-        process_checker_thread = threading.Thread(target=self.process_checker_thread)
-        process_checker_thread.start()
-
-        # Start the browser checker thread
-        browser_checker_thread = threading.Thread(target=self.browser_checker_thread)
-        browser_checker_thread.start()
-
-        # Start the process communicator thread
-        process_communicator_thread = threading.Thread(
-            target=self.process_communicator_thread
-        )
-        process_communicator_thread.start()
+       
 
 #Methods
 
@@ -246,19 +274,157 @@ class ChessApp:
             self.stockfish_settings_toggled = True
             dpg.configure_item("toggle next", direction = 0)
 
-    # Callback for background interaction
-    def on_background_click(self, sender, app_data):
-        print("Background clicked")
+    def on_close_listener(self):
+        # Set self.exit to True so that the threads will stop
+        self.exit = True
+    
 
-    # Callbacks and listeners (placeholders for now)
-    def on_website_choice(self, sender, app_data, user_data):
-        self.website = app_data
-        print("gggggg", app_data, "ggggggggggg")
+    # Detects if the Stockfish Bot process is running
+    def process_checker_thread(self):
+        while not self.exit:
+            if (
+                self.running
+                and self.stockfish_bot_process is not None
+                and not self.stockfish_bot_process.is_alive()
+            ):
+                self.on_stop_button_listener()
 
-    def on_open_browser_button_listener(self, sender, app_data, user_data):
+                # Restart the process if restart_after_stopping is True
+                if self.restart_after_stopping:
+                    self.restart_after_stopping = False
+                    self.on_start_button_listener()
+            time.sleep(0.1)
+
+    # Detects if Selenium Chromedriver is running
+    def browser_checker_thread(self):
+        while not self.exit:
+            try:
+                if (
+                    self.opened_browser
+                    and self.chrome is not None
+                    and "target window already closed"
+                    in self.chrome.get_log("driver")[-1]["message"]
+                ):
+                    self.opened_browser = False
+
+                    # Set Opening Browser button state to closed
+                    dpg.configure_item("start", label = "open Browser", enabled = True)
+
+                    self.on_stop_button_listener()
+                    self.chrome = None
+            except IndexError:
+                pass
+            time.sleep(0.1)
+
+    # Responsible for communicating with the Stockfish Bot process
+    # The pipe can receive the following commands:
+    # - "START": Resets and starts the Stockfish Bot
+    # - "S_MOVE": Sends the Stockfish Bot a single move to make
+    #   Ex. "S_MOVEe4
+    # - "M_MOVE": Sends the Stockfish Bot multiple moves to make
+    #   Ex. "S_MOVEe4,c5,Nf3
+    # - "ERR_EXE": Notifies the GUI that the Stockfish Bot can't initialize Stockfish
+    # - "ERR_PERM": Notifies the GUI that the Stockfish Bot can't execute the Stockfish executable
+    # - "ERR_BOARD": Notifies the GUI that the Stockfish Bot can't find the board
+    # - "ERR_COLOR": Notifies the GUI that the Stockfish Bot can't find the player color
+    # - "ERR_MOVES": Notifies the GUI that the Stockfish Bot can't find the moves list
+    # - "ERR_GAMEOVER": Notifies the GUI that the current game is already over
+    def process_communicator_thread(self):
+        while not self.exit:
+            try:
+                if (
+                    self.stockfish_bot_pipe is not None
+                    and self.stockfish_bot_pipe.poll()
+                ):
+                    data = self.stockfish_bot_pipe.recv()
+                    if data == "START":
+                        if data == "START":
+                        # Update the run button
+                            dpg.configure_item("start", label = "Stop", callback = self.on_stop_button_listener, enabled = True)
+
+                    elif data == "STOP":
+                        self.on_stop_button_listener()
+
+                    elif data == "playeriswhite":
+                        self.is_white = True
+                        #self.eval_bar.configure(fg_color = "black")
+                        #self.eval_bar.configure(progress_color = "white")
+                    
+                    elif data == "playerisblack":
+                        self.is_white = False
+
+                        #self.eval_bar.configure(fg_color = "white")
+                        #self.eval_bar.configure(progress_color = "black")
+                    
+                    
+                        
+                    elif data[:4] == "eval":
+                        
+                        if data[:5] == "evalm":
+                            eval = 'M in\n' + data[5:]
+                            dpg.set_value("eval text", str(eval))
+
+
+                        elif data[:5] == "evalp":
+                            eval = data[5:]
+                            eval_float = float(eval)/1000
+                                
+                            dpg.set_value("eval", 0.5 + eval_float/2)
+                                    
+                            dpg.set_value("eval text", str(eval_float))
+                        
+                            
+                    elif data[:7] == "RESTART":
+                        self.restart_after_stopping = True
+                        self.stockfish_bot_pipe.send("DELETE")
+                        
+                        '''
+                        elif data[:6] == "S_MOVE":
+                            move = data[6:]
+                            self.match_moves.append(move)
+                            self.insert_move(move)
+                            self.tree.yview_moveto(1)
+                        elif data[:6] == "M_MOVE":
+                            moves = data[6:].split(",")
+                            self.match_moves += moves
+                            self.set_moves(moves)
+                            self.tree.yview_moveto(1)
+                            '''
+    
+                    elif data[:7] == "ERR_EXE":
+                        message = "Stockfish path provided is not valid!"
+                        self.popup(message, self.errors[1])
+                        
+                    elif data[:8] == "ERR_PERM":
+                            message="Stockfish path provided is not executable!"
+                            self.popup(message, self.errors[1])
+                    elif data[:9] == "ERR_BOARD":
+                        message="Cant find board!"
+                        self.popup(message, self.errors[1])
+                    elif data[:9] == "ERR_COLOR":
+                        message="Cant find player color!"
+                        self.popup(message, self.errors[1])
+                    elif data[:9] == "ERR_MOVES":
+                        message="Cant find moves list!"
+                        self.popup(message, self.errors[1])
+                    elif data[:12] == "ERR_GAMEOVER":
+                        message="Game has already finished!"
+                        self.popup(message, self.errors[1])
+
+                    elif data == "windowfail":
+                        self.on_stop_button_listener()
+                        self.chrome.get(self.current_url)
+                        self.on_start_button_listener()
+            except (BrokenPipeError, OSError):
+                self.stockfish_bot_pipe = None
+                print("Pip Broken")
+
+            time.sleep(0.1)
+
+    def on_open_browser_button_listener(self):
         # Set Opening Browser button state to opening
         self.opening_browser = True
-        dpg.configure_item("open browser", label = "Opening Browser...", enabled = False)
+        dpg.configure_item("open browser", enabled = False, label = "Opening")
         
         # Open Webdriver
         options = webdriver.ChromeOptions()
@@ -272,6 +438,15 @@ class ChessApp:
             )
         except WebDriverException:
             # No chrome installed
+            #self.opening_browser = False
+            #self.open_browser_button.configure(text = "Open Browser")
+            #self.open_browser_button.configure(state = "enabled")
+            '''
+            CTkMessagebox.CTkMessagebox(
+                title = "Error",
+                message = "Cant find Chrome. You need to have Chrome installed for this to work.",
+            )
+            '''
             self.opening_browser = False
             dpg.configure_item("open browser", label = "open browser", enabled = True)
             #popup
@@ -303,6 +478,7 @@ class ChessApp:
             except UnableToSetCookieException:
                 message = "Unnable to load cookies"
                 self.popup(message, self.errors[3])
+            
 
         # Build Stockfish Bot
         self.chrome_url = self.chrome.service.service_url
@@ -315,26 +491,27 @@ class ChessApp:
 
         # Enable run button
         dpg.configure_item("start", enabled = True)
+         
 
-    def on_start_button_listener(self, sender, app_data, user_data):
+    def on_start_button_listener(self):
 
-        dpg.configure_item("start", label = "Starting", enabled = True)
+        dpg.configure_item("start", label = "Starting...", enabled = False, )
 
-        
-
-        # Check if stockfish path is not emptpip install CTkMessageboxy
-        if self.stockfish_path == None:
-            message="Stockfish path is empty"
-            self.popup(message, self.errors[3])
+        # Check if stockfish path is  empty
+        if self.stockfish_path == "":
+            #CTkMessagebox.CTkMessagebox(
+            #    title="Error",
+             #   message="Stockfish path is empty"
+            #)
             return
-
-        #Check if mouseless mode is enabled when on chess.com
-        if dpg.get_value("mouseless mode") == True and self.website == "chesscom":
-            message = "Mouseless mode is only supported on lichess.org"
-            self.popup(message, self.errors[3])
+        '''
+        # Check if mouseless mode is enabled when on chess.com
+        if self.enable_mouseless_mode.get() == 1 and self.website.get() == "chesscom":
+            CTkMessagebox.CTkMessagebox(
+                "Error", "Mouseless mode is only supported on lichess.org"
+            )
             return
-        
-        dpg.configure_item("start", label = "Starting...", enabled = False, callback = self.on_stop_button_listener)
+        '''
 
         # Create the pipes used for the communication
         # between the GUI and the Stockfish Bot process
@@ -383,105 +560,8 @@ class ChessApp:
 
         # Update the run button
         self.running = True
-        dpg.configure_item("start", label = "Stop", enabled = True)
+        dpg.configure_item("start", label = "Stop", enabled = True, callback = self.on_stop_button_listener)
         dpg.configure_item("status",  default_value = "Active", color = (0,255,0))
-
-
-    def on_color_edit(self, sender, app_data, user_data):
-
-        alpha = 122
-
-        color = [int(i) for i in dpg.get_value(sender)[:3]]
-        color.append(alpha)
-
-        self.move_colors[sender.split(" ")[1]] = color
-        print(self.move_colors)
-
-
-    def on_move_selected(self, sender, app_data, user_data):
-        if app_data == "Best Move":
-            rank = "1"
-        elif app_data == "2nd Best Move":
-            rank = "2"                           
-        elif app_data == "3rd Best Move":
-            rank = "3"
-
-        self.move_to_play = int(rank)
-
-    def on_manual_mode_checkbox_listener(self, sender, app_data, user_data):
-        print(f"Manual Mode: {app_data}")
-
-    def on_timer_change(self, sender, app_data, user_data):
-        print(f"Min Timer: {app_data}")
-
-    def on_save_cookies_button_listener(self, sender, app_data, user_data):
-        try:
-            os.remove("cookies.pkl")
-        except FileNotFoundError:
-            pass
-        
-        pickle.dump(self.chrome.get_cookies(), open("cookies.pkl", "wb"))
-
-    def on_topmost_checkbox_listener(self, sender, app_data, user_data):
-        print(f"Window stays on top: {app_data}")
-
-    def on_export_pgn_button_listener(self, sender, app_data, user_data):
-        print("Export PGN button clicked")
-
-    def on_skill_change(self, sender, app_data, user_data):
-        print(f"Skill Level: {app_data}")
-
-    def on_depth_change(self, sender, app_data, user_data):
-        print(f"Depth: {app_data}")
-
-    def on_memory_change(self, sender, app_data, user_data):
-        print(f"Memory: {app_data}")
-
-    def on_cpu_threads_change(self, sender, app_data, user_data):
-        print(f"CPU Threads: {app_data}")
-
-
-    def on_stockfish_selected(self, sender, app_data, user_data):
-        self.stockfish_path = app_data["file_path_name"]
-        print(self.stockfish_path)
-
-
-#helper methods
-
-    def process_checker_thread(self):
-            while not self.exit:
-                if (
-                    self.running
-                    and self.stockfish_bot_process is not None
-                    and not self.stockfish_bot_process.is_alive()
-                ):
-                    self.on_stop_button_listener()
-
-                    # Restart the process if restart_after_stopping is True
-                    if self.restart_after_stopping:
-                        self.restart_after_stopping = False
-                        #self.on_start_button_listener()
-                time.sleep(0.1)
-
-    def browser_checker_thread(self):
-        while not self.exit:
-            try:
-                if (
-                    self.opened_browser
-                    and self.chrome is not None
-                    and "target window already closed"
-                    in self.chrome.get_log("driver")[-1]["message"]
-                ):
-                    self.opened_browser = False
-
-                    # Set Opening Browser button state to closed
-                    dpg.configure_item("open browser", label = "Open Browser", enabled = True)
-
-                    self.on_stop_button_listener()
-                    self.chrome = None
-            except IndexError:
-                pass
-            time.sleep(0.1)
 
     def on_stop_button_listener(self):
         # Stop the Stockfish Bot process
@@ -506,72 +586,69 @@ class ChessApp:
 
         # Update the status text
         self.running = False
-        dpg.configure_item("start", label = "start", callback = self.on_start_button_listener, enabled = True)
+        # Update the run button
+        dpg.configure_item("start", label = "Start", enabled = True, callback = self.on_start_button_listener)
         dpg.configure_item("status",  default_value = "Inactive", color = (255,0,0))
 
-    def process_communicator_thread(self):
-        while not self.exit:
-            try:
-                if (
-                    self.stockfish_bot_pipe is not None
-                    and self.stockfish_bot_pipe.poll()
-                ):
-                    data = self.stockfish_bot_pipe.recv()
-                    if data == "START":
-                        # Update the run button
-                        dpg.configure_item("start", label = "Stop", callback = self.on_stop_button_listener, enabled = True)
+    def on_export_pgn_button_listener(self):
+        # Create the file dialog
+        f = filedialog.asksaveasfile(
+            initialfile="match.pgn",
+            defaultextension=".pgn",
+            filetypes=[("Portable Game Notation", "*.pgn"), ("All Files", "*.*")],
+        )
+        if f is None:
+            return
 
-                    elif data == "STOP":
-                        self.on_stop_button_listener()
+        # Write the PGN to the file
+        data = ""
+        for i in range(len(self.match_moves) // 2 + 1):
+            if len(self.match_moves) % 2 == 0 and i == len(self.match_moves) // 2:
+                continue
+            data += str(i + 1) + ". "
+            data += self.match_moves[i * 2] + " "
+            if (i * 2) + 1 < len(self.match_moves):
+                data += self.match_moves[i * 2 + 1] + " "
+        f.write(data)
+        f.close()
 
-                    elif data[:4] == "eval":
-                        
-                        if data[:5] == "evalm":
-                            eval = 'M in\n' + data[5:]
-                            dpg.configure_item(eval, overlay = str(eval))
+    def on_select_stockfish_button_listener(self):
+        # Create the file dialog
+        f = filedialog.askopenfilename()
+        if f is None:
+            return
 
+        # Set the Stockfish path
+        self.stockfish_path = f
 
-                        elif data[:5] == "evalp":
-                            eval = data[5:]
-                            eval_float = float(eval)/10
-                            
-      
-                                
-                            dpg.configure_item('eval', overlay = str(0.5 + eval_float/2), default_value = 0.5 + eval_float/2)
-                                    
-                            #self.eval_label.configure(text = eval)
-                            
-                    elif data[:7] == "RESTART":
-                        self.restart_after_stopping = True
-                        self.stockfish_bot_pipe.send("DELETE")
-                    elif data[:7] == "ERR_EXE":
-                        message = "Stockfish path provided is not valid!"
-                        self.popup(message, self.errors[1])
-                        
-                    elif data[:8] == "ERR_PERM":
-                            message="Stockfish path provided is not executable!"
-                            self.popup(message, self.errors[1])
-                    elif data[:9] == "ERR_BOARD":
-                        message="Cant find board!"
-                        self.popup(message, self.errors[1])
-                    elif data[:9] == "ERR_COLOR":
-                        message="Cant find player color!"
-                        self.popup(message, self.errors[1])
-                    elif data[:9] == "ERR_MOVES":
-                        message="Cant find moves list!"
-                        self.popup(message, self.errors[1])
-                    elif data[:12] == "ERR_GAMEOVER":
-                        message="Game has already finished!"
-                        self.popup(message, self.errors[1])
+    #Custom methods
+    
+    def on_save_cookies_button_listener(self):
+        pickle.dump(self.chrome.get_cookies(), open("cookies.pkl", "wb"))
 
-                    elif data == "windowfail":
-                        self.on_stop_button_listener()
-                        self.chrome.get(self.current_url)
-                        self.on_start_button_listener()
-                        
-            except (BrokenPipeError, OSError):
-                self.stockfish_bot_pipe = None
-                time.sleep(0.1)
+    def on_website_choice(self, sender, app_data, user_data):
+        self.website = app_data
+        print("gggggg", app_data, "ggggggggggg")
+
+    def on_color_edit(self, sender, app_data, user_data):
+
+        alpha = 122
+
+        color = [int(i) for i in dpg.get_value(sender)[:3]]
+        color.append(alpha)
+
+        self.move_colors[sender.split(" ")[1]] = color
+        print(self.move_colors)
+
+    def on_move_selected(self, sender, app_data, user_data):
+        if app_data == "Best Move":
+            rank = "1"
+        elif app_data == "2nd Best Move":
+            rank = "2"                           
+        elif app_data == "3rd Best Move":
+            rank = "3"
+
+        self.move_to_play = int(rank)
 
     def popup(self, message, level):
         dpg.configure_item("modal", show = True)
@@ -579,20 +656,7 @@ class ChessApp:
         if level == self.errors[1]:
             dpg.configure_item("open browser", enabled = True, label = "Open Browser")
             dpg.configure_item("start", label = "start", callback = self.on_start_button_listener, enabled = True)
-
-    def select_stockfish(self):
-
-
-        root = tk.Tk()
-        root.withdraw()
-
-        self.stockfish_path = filedialog.askopenfilename()
-        print(self.stockfish_path)
-
-    def on_close_listener(self):
-        # Set self.exit to True so that the threads will stop
-        self.exit = True
-
+        
     
 if __name__ == "__main__":
     ChessApp()

@@ -197,10 +197,9 @@ class StockfishBot(multiprocess.Process):
 
                     else:
                         eval = score.white().score()
-                        self.pipe.send("evalp" + str(eval / 100))
+                        self.pipe.send("evalp" + str(eval))
 
-                    # Notify GUI that bot is ready
-                    self.pipe.send("START")
+                    # Notify GUI that bot is ready                    self.pipe.send("START")
 
                     # Send the first moves to the GUI (if there are any)
                     if len(move_list) > 0:
@@ -369,7 +368,7 @@ class StockfishBot(multiprocess.Process):
 
                             else:
                                 eval = score.white().score()
-                                self.pipe.send("evalp" + str(eval / 100))
+                                self.pipe.send("evalp" + str(eval))
                                 
                             # Send the move to the GUI
                             self.pipe.send("S_MOVE" + move_san)
@@ -449,7 +448,7 @@ class StockfishBot(multiprocess.Process):
 
                         else:
                             eval = score.white().score()
-                            self.pipe.send("evalp" + str(eval / 100))
+                            self.pipe.send("evalp" + str(eval))
 
                 except NoSuchWindowException:
                     self.pipe.send("windowfail")
