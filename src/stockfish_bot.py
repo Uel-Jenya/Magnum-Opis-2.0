@@ -46,6 +46,8 @@ class StockfishBot(multiprocess.Process):
             self.timer_min = None
             self.timer_max = None
 
+        self.eval = 0
+
         
       
 
@@ -192,12 +194,12 @@ class StockfishBot(multiprocess.Process):
                     
                     score = engine.analyse(board, chess.engine.Limit(depth=self.analysis_depth), multipv=1)[0]['score']
                     if score.is_mate():
-                        eval = score.white().mate()
-                        self.pipe.send("evalm" + str(eval))
+                        self.eval = score.white().mate()
+                        self.pipe.send("evalm" + str(self.eval))
 
                     else:
-                        eval = score.white().score()
-                        self.pipe.send("evalp" + str(eval))
+                        self.eval = score.white().score()
+                        self.pipe.send("evalp" + str(self.eval))
 
                     # Notify GUI that bot is ready                    self.pipe.send("START")
 
@@ -257,74 +259,42 @@ class StockfishBot(multiprocess.Process):
                                 else:
                                     moves = []
                                     top_3_moves = engine.analyse(board,chess.engine.Limit(depth=self.play_depth), multipv=3)
+
+                                    
+                                    eval = top_3_moves[0]["score"].white().score()
+                                    eval1 = 0 if len(top_3_moves) <= 1 else top_3_moves[1]["score"].white().score()
+                                    eval2 = 0 if len(top_3_moves) <= 2 else top_3_moves[2]["score"].white().score()
+
+                                    print(type(eval))
+                                    print(type(eval1))
+                                    print(type(eval2))
+
+                                    if not self.is_white:
+                                        if eval != None:
+                                            self.pipe.send("moveEval1" + str(self.eval - eval))
+
+                                        if eval1 != None:
+                                            self.pipe.send("moveEval2" + str(self.eval - eval1))
+
+                                        if eval2 != None:
+                                            self.pipe.send("moveEval3" + str(self.eval - eval2))
+                                    else:
+                                        if eval != None:
+                                            self.pipe.send("moveEval1" + str(eval - self.eval))
+
+                                        if eval1 != None:
+                                            self.pipe.send("moveEval2" + str(eval1 - self.eval))
+
+                                        if eval2 != None:
+                                            self.pipe.send("moveEval3" + str(eval2 - self.eval))
+
+
                                     
                                     for i in range(len(top_3_moves)):
-                                        
+
                                         cmove =top_3_moves[i]["pv"][0].uci()
                                         move_start_pos, move_end_pos = self.get_move_pos(cmove)
                                         
-                                        '''try:
-                                            if mate != None:
-                                                rank = 1
-                                            else:
-                                                if self.is_white == True:
-                                                    if i == 2:
-                                                        if centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i - 2]['Centipawn']:
-                                                            rank = 1
-                                                        
-                                                        elif (centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i - 2]['Centipawn']) or (centipawn >= top_3_moves[i - 2]['Centipawn'] and centipawn <= top_3_moves[i -2]['Centipawn']):                          
-                                                            rank = 2
-                                                            
-                                                        elif centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i - 2]['Centipawn']:
-                                                            rank = 3
-                                                            
-                                                        moves.append({
-                                                            #'Centipawn': float(centipawn),
-                                                            #'Mate': mate,
-                                                            'position': ((int(move_start_pos[0]), int(move_start_pos[1])), (int(move_end_pos[0]), int(move_end_pos[1]))),
-                                                            'rank': rank
-                                                        })
-                                                        
-                                                        break
-                                                    
-                                                    if centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i + 1]['Centipawn']:
-                                                        rank = 1
-                                                        
-                                                    elif (centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i + 1]['Centipawn']) or (centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i + 1]['Centipawn']):                          
-                                                        rank = 2
-                                                        
-                                                    elif centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i + 1]['Centipawn']:
-                                                        rank = 3
-                                                    
-                                                else:
-                                                    if i == 2:
-                                                        if centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i - 2]['Centipawn']:
-                                                            rank = 3
-                                                        
-                                                        elif (centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i - 2]['Centipawn']) or (centipawn >= top_3_moves[i - 2]['Centipawn'] and centipawn <= top_3_moves[i -2]['Centipawn']):                          
-                                                            rank = 2
-                                                            
-                                                        elif centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i - 2]['Centipawn']:
-                                                            rank = 1
-                                                            
-                                                        moves.append({
-                                                            #'Centipawn': float(centipawn),
-                                                            #'Mate': mate,
-                                                            'position': ((int(move_start_pos[0]), int(move_start_pos[1])), (int(move_end_pos[0]), int(move_end_pos[1]))),
-                                                            'rank': rank
-                                                        })
-                                                        
-                                                        break
-                                                    
-                                                    if centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i + 1]['Centipawn']:
-                                                        rank = 3
-                                                        
-                                                    elif (centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn >= top_3_moves[i + 1]['Centipawn']) or (centipawn >= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i + 1]['Centipawn']):                          
-                                                        rank = 2
-                                                        
-                                                    elif centipawn <= top_3_moves[i - 1]['Centipawn'] and centipawn <= top_3_moves[i + 1]['Centipawn']:
-                                                        rank = 1
-                                                '''
                                         moves.append({
                                             #'Centipawn': float(centipawn),
                                             #'Mate': mate,
@@ -363,12 +333,12 @@ class StockfishBot(multiprocess.Process):
                             #get eval
                             score = engine.analyse(board, chess.engine.Limit(depth=self.analysis_depth), multipv=1)[0]['score']
                             if score.is_mate():
-                                eval = score.white().mate()
-                                self.pipe.send("evalm" + str(eval))
+                                self.eval = score.white().mate()
+                                self.pipe.send("evalm" + str(self.eval))
 
                             else:
-                                eval = score.white().score()
-                                self.pipe.send("evalp" + str(eval))
+                                self.eval = score.white().score()
+                                self.pipe.send("evalp" + str(self.eval))
                                 
                             # Send the move to the GUI
                             self.pipe.send("S_MOVE" + move_san)
@@ -443,12 +413,12 @@ class StockfishBot(multiprocess.Process):
 
                         score = engine.analyse(board, chess.engine.Limit(depth=self.analysis_depth), multipv=1)[0]['score']
                         if score.is_mate():
-                            eval = score.white().mate()
-                            self.pipe.send("evalm" + str(eval))
+                            self.eval = score.white().mate()
+                            self.pipe.send("evalm" + str(self.eval))
 
                         else:
-                            eval = score.white().score()
-                            self.pipe.send("evalp" + str(eval))
+                            self.eval = score.white().score()
+                            self.pipe.send("evalp" + str(self.eval))
 
                 except NoSuchWindowException:
                     self.pipe.send("windowfail")

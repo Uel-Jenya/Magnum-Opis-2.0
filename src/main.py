@@ -151,6 +151,10 @@ class ChessApp:
                             dpg.add_progress_bar(tag="eval", default_value= 0.5, width= 200)
                             dpg.add_text(tag = "eval text", default_value="0")
 
+                            dpg.add_text(tag = "move eval1", default_value="move 1: 0")
+                            dpg.add_text(tag = "move eval2", default_value="move 2: 0")
+                            dpg.add_text(tag = "move eval3", default_value="move 3: 0")
+
                             #dpg.add_checkbox(label="Window stays on top", default_value=True, callback=self.on_topmost_checkbox_listener)
 
                         with dpg.child_window(no_scrollbar=True, border=False, width=50):  # Increase width here
@@ -172,31 +176,6 @@ class ChessApp:
                         dpg.add_separator()
                         dpg.add_button(label="OK", width=75, callback=lambda: dpg.configure_item("modal", show=False), pos=(90, 70))
 
-                    
-
-                    #dpg.add_bar_group_series(values= [0,5, 0.5], label_ids= ["black", "white"], group_size=2)
-                    # Create a plot
-                    # create x axis
-                    '''                    with dpg.plot(label="Bar Group Series", height=400, width=50):
-                        dpg.add_plot_legend()
-
-                        ilabels = ["black","white"]
-                        glabels = (("eval", 0))
-                        groups_c = 2
-
-                        
-
-                        dpg.add_plot_axis(dpg.mvXAxis, label="Student", tag="xaxis_bar_group", no_gridlines=True, auto_fit=True)
-                        dpg.set_axis_limits(dpg.last_item(), 5, 10)
-                        #dpg.set_axis_ticks(dpg.last_item(), glabels)
-
-                        # create y axis
-                        with dpg.plot_axis(dpg.mvYAxis, label="Score", tag="yaxis_bar_group", auto_fit=True):
-                            dpg.set_axis_limits(dpg.last_item(), 0, 110)
-                            dpg.add_bar_group_series(values=[0.5, 0.5], label_ids=ilabels, 
-                                group_size=groups_c, tag="bar_group_series", label="Final Exam")
-                    
-                        '''
 
 
 
@@ -355,8 +334,16 @@ class ChessApp:
 
                         #self.eval_bar.configure(fg_color = "white")
                         #self.eval_bar.configure(progress_color = "black")
-                    
-                    
+                
+                    elif data[:9] == "moveEval1":
+                        dpg.set_value("move eval1", "move 1: " + str(float(data[9:]) /1000))
+
+                    elif data[:9] == "moveEval2":
+                        dpg.set_value("move eval2", "move 2: " + str(float(data[9:]) /1000))
+
+                    elif data[:9] == "moveEval3":
+                        dpg.set_value("move eval3", "move 3: " + str(float(data[9:]) /1000))
+
                         
                     elif data[:4] == "eval":
                         
