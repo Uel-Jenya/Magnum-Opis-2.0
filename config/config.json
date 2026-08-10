@@ -1,0 +1,56 @@
+{
+  "stockfish_path": "C:/Users/Administrator/Downloads/Magnum-Opis-2.0-Main/Magnum-Opis-2.0-Main/stockfish-windows-x86-64-avx2.exe",
+  "website": "Chess.com",
+  "move_to_play": 1,
+  "manual_mode": true,
+  "mouseless_mode": false,
+  "non_stop_puzzles": false,
+  "bongcloud": false,
+  "timer_enabled": false,
+  "mouse_move_min_time": 0.10000000149011612,
+  "mouse_move_max_time": 6.039000034332275,
+  "timer_min": 2,
+  "timer_max": 20,
+  "load_cookies": true,
+  "show_arrow_1": true,
+  "show_arrow_2": true,
+  "show_arrow_3": true,
+  "elo_preset": 3200,
+  "limit_elo": false,
+  "dynamic_difficulty": true,
+  "autostart": true,
+  "stockfish_settings": {
+    "skill_level": 20,
+    "hash": 512,
+    "depth": 6,
+    "threads": 8,
+    "move_overhead": 15,
+    "analysis_time_budget": 1.2000000476837158
+  },
+  "arrow_colors": {
+    "1": [
+      0,
+      255,
+      0,
+      122
+    ],
+    "2": [
+      255,
+      163,
+      0,
+      122
+    ],
+    "3": [
+      255,
+      0,
+      0,
+      122
+    ]
+  },
+  "window": {
+    "x": null,
+    "y": null,
+    "width": 400,
+    "height": 550
+  }
+}

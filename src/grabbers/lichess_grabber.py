@@ -94,35 +94,20 @@ class LichessGrabber(Grabber):
 
         # Get the move elements (children of the move list element)
         try:
-            if not is_puzzles:
-                if not self.moves_list:
-                    # If the moves list is empty, find all moves
-                    children = move_list_elem.find_elements(By.CSS_SELECTOR, self.tag_name)
-                else:
-                    # If the moves list is not empty, find only the new moves
-                    children = move_list_elem.find_elements(By.CSS_SELECTOR, self.tag_name + ":not([data-processed])")
-            else:
-                if not self.moves_list:
-                    # If the moves list is empty, find all moves
-                    children = move_list_elem.find_elements(By.CSS_SELECTOR, "move")
-                else:
-                    # If the moves list is not empty, find only the new moves
-                    children = move_list_elem.find_elements(By.CSS_SELECTOR, "move:not([data-processed])")
+            # Return a fresh snapshot instead of an incremental cache.  This
+            # lets the bot spot a new game when the site replaces its movelist.
+            children = move_list_elem.find_elements(By.CSS_SELECTOR, "move" if is_puzzles else self.tag_name)
         except NoSuchElementException:
             return None
 
         # Get the moves from the elements
+        current_moves = []
         for move_element in children:
             # Sanitize the move
             move = re.sub(r"[^a-zA-Z0-9+-]", "", move_element.text)
-            print(move)
             if move != "":
-                self.moves_list[move_element.id] = move
-
-            # Mark the move as processed
-            self.chrome.execute_script("arguments[0].setAttribute('data-processed', 'true')", move_element)
-            print([val for val in self.moves_list.values()][-1])
-        return [val for val in self.moves_list.values()]
+                current_moves.append(move)
+        return current_moves
 
     def get_puzzles_move_list_elem(self):
         try:

@@ -1,3 +1,5 @@
+import re
+
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 
@@ -60,66 +62,42 @@ class ChesscomGrabber(Grabber):
             return False
 
     def get_move_list(self):
-        # Find the moves list
-        try:
-            move_list_elem = self.chrome.find_element(By.CLASS_NAME, "play-controller-scrollable")
-        except NoSuchElementException:
-            try:
-                move_list_elem = self.chrome.find_element(By.CLASS_NAME, "chessboard-pkg-move-list-component")
-            except NoSuchElementException:
-                    return None
+        # Fetch the entire list in one browser round trip.  The former version
+        # made several Selenium calls for every ply (element lookup, class,
+        # nested lookup, figurine and text), which is the dominant delay as a
+        # game gets longer.
+        moves = self.chrome.execute_script("""
+            const list = document.querySelector(
+                '.play-controller-scrollable, .chessboard-pkg-move-list-component');
+            if (!list) return null;
+            return [...list.querySelectorAll('.main-line-ply')]
+                .filter(move => /(?:white|black)-move/.test(move.className))
+                .map(move => ({
+                    text: move.innerText,
+                    figure: move.querySelector('[data-figurine]')?.getAttribute('data-figurine')
+                }));
+        """)
+        if moves is None:
+            return None
 
-        # Select all children with class containing "white node" or "black node"
-        # Moves that are not pawn moves have a different structure
-        # containing children
-        if not self.moves_list:
-            # If the moves list is empty, find all moves
-            moves = move_list_elem.find_elements(By.CLASS_NAME, "main-line-ply")
-        else:
-            # If the moves list is not empty, find only the new moves
-            moves = move_list_elem.find_elements(By.CLASS_NAME, "main-line-ply:not([data-processed])")
-
+        current_moves = []
         for move in moves:
-            move_class = move.get_attribute("class")
+            # innerText includes display whitespace around Chess.com's piece
+            # icons (for example, "N f6").  SAN cannot contain it.
+            text = re.sub(r"\s+", "", move["text"] or "")
+            figure = move["figure"]
+            if figure is None:
+                current_moves.append(text)
+                continue
 
-            # Check if it is indeed a move
-            if "white-move" in move_class or "black-move" in move_class:
-                # Check if it has a figure
-                try:
-                    figure_span = move.find_element(By.XPATH, "./*").find_element(By.XPATH, "./*")
-                    figure = figure_span.get_attribute("data-figurine")
-                except NoSuchElementException:
-                    figure = None
-
-                # Check if it was en-passant or figure-move
-                if figure is None:
-                    # If the moves_list is empty or the last move was not the current move
-                    self.moves_list[move.id] = move.text
-
-                else:
-                    m = figure + move.text 
-
-                    if "=" in move.text:
-                        # If the move is a check, add the + in the end
-                        if "+" in m:
-                            m = m.replace("+", "")
-                            m += "+"
-
-                    if "+" in m:
-                        m = m.replace("+", "")
-                        m += "+"
-
-                    # If the moves_list is empty or the last move was not the current move
-                    #self.moves_list[move.get_attribute("data-ply")] = m
-                    self.moves_list[move.id] = m
-                #else:
-                    # If the moves_list is empty or the last move was not the current move
-                    #self.moves_list[move.get_attribute("data-ply")] = figure + move.text
-
-                # Mark the move as processed
-                self.chrome.execute_script("arguments[0].setAttribute('data-processed', 'true')", move)
-
-        return [val for val in self.moves_list.values()]
+            # Some page variants include the figurine in innerText while
+            # others expose it only through data-figurine.  Never add it
+            # twice.
+            formatted = text if text.startswith(figure) else figure + text
+            if "+" in formatted:
+                formatted = formatted.replace("+", "") + "+"
+            current_moves.append(formatted)
+        return current_moves
 
     def is_game_puzzles(self):
         return False
